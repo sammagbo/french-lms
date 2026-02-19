@@ -21,7 +21,7 @@ import { CommunityModule } from './community/community.module';
                               ttl: 60000,
                               limit: 10,
                         }],
-                        storage: new ThrottlerStorageRedisService(config.get('REDIS_URL')),
+                        // storage: new ThrottlerStorageRedisService(config.get('REDIS_URL')),
                   }),
             }),
             PrismaModule,
