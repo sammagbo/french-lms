@@ -30,7 +30,7 @@ async function bootstrap() {
       // 4. CORS Strict
       const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
       app.enableCors({
-            origin: frontendUrl.split(','), // Permite múltiplos domínios separados por vírgula
+            origin: true, // Temporariamente permitir tudo para debug
             methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
             credentials: true,
       });
