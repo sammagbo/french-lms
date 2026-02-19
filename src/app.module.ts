@@ -8,6 +8,7 @@ import { AuthModule } from './auth/auth.module';
 import { AcademyModule } from './academy/academy.module';
 import { ClassroomModule } from './classroom/classroom.module';
 import { CommunityModule } from './community/community.module';
+import { DevModule } from './dev/dev.module';
 
 @Module({
       imports: [
@@ -26,7 +27,8 @@ import { CommunityModule } from './community/community.module';
             AuthModule,
             AcademyModule,
             ClassroomModule,
-            CommunityModule
+            CommunityModule,
+            DevModule
       ],
       providers: [
             {
