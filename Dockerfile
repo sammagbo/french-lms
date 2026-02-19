@@ -29,6 +29,9 @@ FROM node:18-alpine
 # Set environment variables
 ENV NODE_ENV=production
 
+# Install OpenSSL for Prisma
+RUN apk -U add openssl
+
 WORKDIR /app
 
 # Copy built assets from builder
