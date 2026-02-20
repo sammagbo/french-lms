@@ -18,4 +18,4 @@ npx prisma migrate deploy 2>&1 || echo "WARNING: Prisma migrate failed!"
 echo ""
 
 echo "--- Starting NestJS Server ---"
-exec node dist/main
+exec node dist/src/main
