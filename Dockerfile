@@ -44,5 +44,5 @@ COPY --from=builder /app/prisma ./prisma
 # Expose port
 EXPOSE 3000
 
-# Run migrations then start the server
-CMD ["sh", "-c", "npx prisma migrate deploy && node dist/main"]
+# Run migrations then start the server with verbose error output
+CMD ["sh", "-c", "echo '=== ENV CHECK ===' && echo \"DATABASE_URL set: $(test -n \"$DATABASE_URL\" && echo YES || echo NO)\" && echo \"JWT_SECRET length: $(echo -n \"$JWT_SECRET\" | wc -c)\" && echo \"FRONTEND_URL: $FRONTEND_URL\" && echo \"PORT: $PORT\" && echo '=== PRISMA MIGRATE ===' && npx prisma migrate deploy 2>&1 && echo '=== STARTING NESTJS ===' && node dist/main 2>&1"]
