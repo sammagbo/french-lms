@@ -1,136 +1,142 @@
-import { PrismaClient, Role, SubmissionStatus } from '@prisma/client';
+import { PrismaClient, Role } from '@prisma/client';
+import * as bcrypt from 'bcrypt';
 
 const prisma = new PrismaClient();
 
 async function main() {
-      console.log('🌱 Seeding database...');
+      console.log('🌱 Iniciando o Seeding da Base de Dados (French A1)...');
 
-      // 0. Use the provided hash for '123456'
-      const passwordHash = '$2b$10$EpRnTzVlqHNP0zQx.JfLFO/doDGp91eoCIzceDb5LF.vHw8H8K6i6';
+      // 1. Password Genérica
+      const saltRounds = 10;
+      const passwordHash = await bcrypt.hash('123456', saltRounds);
 
-      // 1. Create Teacher
-      // Note: User model does not have fullName, only email/passwordHash/role/profile
+      // 2. Criar ou Obter o Professor (Admin)
+      console.log('👤 Criando usuário Professor...');
       const teacher = await prisma.user.upsert({
-            where: { email: 'prof@escola.com' },
+            where: { email: 'prof@french.com' },
             update: {},
             create: {
-                  email: 'prof@escola.com',
+                  email: 'prof@french.com',
                   passwordHash,
                   role: Role.TEACHER,
                   profile: {
                         create: {
-                              bio: 'Professor de Francês experiente.',
-                        }
-                  }
+                              bio: 'Professor Nativo de Francês.',
+                              frenchLevel: 'C2',
+                        },
+                  },
             },
       });
-      console.log('User created:', teacher.email);
 
-      // 2. Create Student
+      // 3. Criar ou Obter o Aluno
+      console.log('👤 Criando usuário Aluno...');
       const student = await prisma.user.upsert({
-            where: { email: 'aluno@escola.com' },
+            where: { email: 'aluno@french.com' },
             update: {},
             create: {
-                  email: 'aluno@escola.com',
+                  email: 'aluno@french.com',
                   passwordHash,
                   role: Role.STUDENT,
                   profile: {
                         create: {
-                              bio: 'Aluno dedicado.',
-                        }
-                  }
+                              bio: 'Estudante iniciante de Francês.',
+                              frenchLevel: 'A1',
+                        },
+                  },
             },
       });
-      console.log('User created:', student.email);
 
-      // 3. Create Course -> Module -> Lesson
-      const course = await prisma.course.upsert({
-            where: { slug: 'frances-basico' },
-            update: {},
-            create: {
-                  title: 'Francês Básico',
-                  description: 'Curso introdutório de Francês.',
-                  slug: 'frances-basico',
+      // 4. Criar o Curso
+      console.log('📚 Criando o Curso "Francês Essencial"...');
+
+      // Limpar curso se já existir (para evitar duplicações em seeds repetidos não-upsertáveis, embora o course seja upsertável, mas os relations nested podem causar dores de cabeça se não os mapearmos 1:1, mas vamos tentar com UPSERT simples primeiro na root). E apagar e recriar para garantir limpeza.
+      await prisma.activity.deleteMany({ where: { title: 'Prática de Pronúncia: Apresentação' } });
+      await prisma.course.deleteMany({ where: { slug: 'frances-essencial-a1' } });
+
+      const course = await prisma.course.create({
+            data: {
+                  title: 'Francês Essencial: Do Zero à Primeira Conversa',
+                  slug: 'frances-essencial-a1',
+                  description: 'O curso definitivo para quem quer dar os primeiros passos no idioma francês de forma imersiva e natural.',
                   price: 0,
                   authorId: teacher.id,
                   modules: {
-                        create: {
-                              title: 'Módulo 1: Introdução',
-                              // Schema does not have order on Module? Let's check schema.
-                              // Schema: Module { id, title, courseId, createdAt, updatedAt } - NO ORDER
-                              lessons: {
-                                    create: {
-                                          title: 'Aula 1: Saudações',
-                                          // Schema: Lesson { id, title, videoUrl, content, moduleId } - NO ORDER, NO isPublished
-                                          videoUrl: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
-                                          content: '<p>Bienvenue! Nesta aula vamos aprender a dizer <strong>Bonjour</strong>.</p>',
+                        create: [
+                              // Módulo 1
+                              {
+                                    title: 'Módulo 1: Les Salutations (Saudações)',
+                                    lessons: {
+                                          create: [
+                                                {
+                                                      title: 'Aula 1: Bonjour e Bonsoir',
+                                                      content: `
+# Bem-vindo(a) à sua primeira aula!
+
+Aprender a cumprimentar é o primeiro passo para qualquer conversa em francês.
+
+### Qual a diferença?
+*   **Bonjour:** Significa literalmente "Bom dia", mas é traduzido como "Olá" e usado até ao final da tarde (cerca das 18h).
+*   **Bonsoir:** É o "Boa noite" que dizemos quando chegamos a um local ou cumprimentamos alguém a partir do pôr do sol.
+
+Assista ao vídeo abaixo para treinar a sua pronúncia com um professor nativo!
+                  `,
+                                                      videoUrl: 'https://www.youtube.com/watch?v=FjH30SCA1H0', // Exemplo didático público
+                                                },
+                                          ],
                                     },
                               },
-                        },
+                              // Módulo 2
+                              {
+                                    title: 'Módulo 2: Se Présenter (Apresentar-se)',
+                                    lessons: {
+                                          create: [
+                                                {
+                                                      title: 'Aula 1: Os Verbos Être e Avoir',
+                                                      content: `
+# A Base do Idioma
+
+Os verbos **Être** (Ser/Estar) e **Avoir** (Ter) são as espinhas dorsais da língua francesa.
+
+*   **Je suis** (Eu sou/estou)
+*   **J'ai** (Eu tenho)
+
+Vamos explorar como utilizá-los numa pequena apresentação pessoal no vídeo desta aula.
+                  `,
+                                                      videoUrl: 'https://www.youtube.com/watch?v=qE4ZqQ_E7sU',
+                                                }
+                                          ]
+                                    }
+                              }
+                        ],
                   },
             },
-            include: {
-                  modules: {
-                        include: {
-                              lessons: true,
-                        },
-                  },
-            },
-      });
-      console.log('Course created:', course.title);
-
-      // Get the Created Lesson
-      const lesson = course.modules[0].lessons[0];
-
-      // 4. Create Activity (Homework)
-      const activity = await prisma.activity.create({
-            data: {
-                  title: 'Gravar áudio de apresentação',
-                  description: 'Grave um áudio dizendo seu nome e "Bonjour".',
-                  lessonId: lesson.id,
-                  authorId: teacher.id,
-            },
-      });
-      console.log('Activity created:', activity.title);
-
-      // 5. Create StudentActivity (The Assignment)
-      // Schema: StudentActivity { id, status, dueDate, studentId, activityId } - NO COMPOUND UNIQUE KEY in current schema?
-      // Schema defines @map("student_activities") but no @@unique([studentId, activityId]) ?
-      // Let's check schema again. Relationships: student, activity.
-      // If no unique constraint, we might create duplicates. Ideally should findFirst.
-
-      const existingAssignment = await prisma.studentActivity.findFirst({
-            where: {
-                  studentId: student.id,
-                  activityId: activity.id
-            }
       });
 
-      if (!existingAssignment) {
-            const assignment = await prisma.studentActivity.create({
+      console.log('✅ Curso e Módulos criados com sucesso.');
+
+      // 5. Criar uma Atividade vinculada à Aula (Módulo 2, Aula 1)
+      const lessonVerbs = await prisma.lesson.findFirst({
+            where: { title: 'Aula 1: Os Verbos Être e Avoir', module: { courseId: course.id } }
+      });
+
+      if (lessonVerbs) {
+            console.log('📝 Criando a Atividade de Pronúncia...');
+            await prisma.activity.create({
                   data: {
-                        studentId: student.id,
-                        activityId: activity.id,
-                        status: SubmissionStatus.PENDING,
-                        dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // +7 days
+                        title: 'Prática de Pronúncia: Apresentação',
+                        description: "Grave um áudio ou escreva: Je m'appelle [Nome], je suis brésilien(ne) et j'habite à [Cidade].",
+                        lessonId: lessonVerbs.id,
+                        authorId: teacher.id,
                   },
-            });
-            console.log('Assignment created for:', student.email);
-      } else {
-            console.log('Assignment already exists.');
-            // Update status if needed
-            await prisma.studentActivity.update({
-                  where: { id: existingAssignment.id },
-                  data: { status: SubmissionStatus.PENDING }
             });
       }
 
-      console.log('✅ Seeding finished.');
+      console.log('🎉 Seeding concluído com sucesso!');
 }
 
 main()
       .catch((e) => {
-            console.error(e);
+            console.error('❌ Erro durante o seeding:', e);
             process.exit(1);
       })
       .finally(async () => {
