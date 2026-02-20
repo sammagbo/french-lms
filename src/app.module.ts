@@ -10,6 +10,7 @@ import { AcademyModule } from './academy/academy.module';
 import { ClassroomModule } from './classroom/classroom.module';
 import { CommunityModule } from './community/community.module';
 import { DevModule } from './dev/dev.module';
+import { CacheModule } from '@nestjs/cache-manager';
 import { AnalyticsModule } from './analytics/analytics.module';
 
 @Module({
@@ -40,6 +41,11 @@ import { AnalyticsModule } from './analytics/analytics.module';
                               limit: 10,
                         }],
                   }),
+            }),
+            CacheModule.register({
+                  isGlobal: true, // Make CacheModule globally available
+                  ttl: 5 * 60 * 1000, // Default TTL 5 minutes in milliseconds
+                  max: 100, // Maximum number of items in cache
             }),
             PrismaModule,
             UsersModule,

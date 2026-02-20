@@ -63,7 +63,9 @@ export class AnalyticsService {
        * Submissões agrupadas por dia — últimos 7 dias
        * Usa raw query para GROUP BY date_trunc (mais eficiente que trazer N registos para agrupar em memória)
        */
-      async getSubmissionsByDay(): Promise<{ date: string; count: number }[]> {
+      async getSubmissionsByDay(days: number = 7): Promise<{ date: string; count: number }[]> {
+            // Prisma queryRaw does not support parameterizing INTERVAL directly safely if we just use template literal for INTERVAL '${days} days' avoiding sql injection if it was string, but days is number, we can use Prisma.sql.
+            // Better to use mathematical interval interpolation: NOW() - (INTERVAL '1 day' * $1)
             const result = await this.prisma.$queryRaw<
                   { date: Date; count: bigint }[]
             >`
@@ -71,13 +73,13 @@ export class AnalyticsService {
                         DATE_TRUNC('day', "createdAt") AS date,
                         COUNT(*)::int AS count
                   FROM submissions
-                  WHERE "createdAt" >= NOW() - INTERVAL '7 days'
+                  WHERE "createdAt" >= NOW() - (INTERVAL '1 day' * ${days})
                   GROUP BY DATE_TRUNC('day', "createdAt")
                   ORDER BY date ASC
             `;
 
             // Preencher dias sem submissões com 0
-            const last7Days = this.getLast7Days();
+            const lastXDays = this.getLastXDays(days);
             const resultMap = new Map(
                   result.map((r) => [
                         new Date(r.date).toISOString().split('T')[0],
@@ -85,7 +87,7 @@ export class AnalyticsService {
                   ]),
             );
 
-            return last7Days.map((day) => ({
+            return lastXDays.map((day) => ({
                   date: day,
                   count: resultMap.get(day) || 0,
             }));
@@ -94,7 +96,7 @@ export class AnalyticsService {
       /**
        * Novos alunos por dia — últimos 7 dias
        */
-      async getNewStudentsByDay(): Promise<{ date: string; count: number }[]> {
+      async getNewStudentsByDay(days: number = 7): Promise<{ date: string; count: number }[]> {
             const result = await this.prisma.$queryRaw<
                   { date: Date; count: bigint }[]
             >`
@@ -102,13 +104,13 @@ export class AnalyticsService {
                         DATE_TRUNC('day', "createdAt") AS date,
                         COUNT(*)::int AS count
                   FROM users
-                  WHERE "createdAt" >= NOW() - INTERVAL '7 days'
+                  WHERE "createdAt" >= NOW() - (INTERVAL '1 day' * ${days})
                         AND role = 'STUDENT'
                   GROUP BY DATE_TRUNC('day', "createdAt")
                   ORDER BY date ASC
             `;
 
-            const last7Days = this.getLast7Days();
+            const lastXDays = this.getLastXDays(days);
             const resultMap = new Map(
                   result.map((r) => [
                         new Date(r.date).toISOString().split('T')[0],
@@ -116,18 +118,19 @@ export class AnalyticsService {
                   ]),
             );
 
-            return last7Days.map((day) => ({
+            return lastXDays.map((day) => ({
                   date: day,
                   count: resultMap.get(day) || 0,
             }));
       }
 
       /**
-       * Utilitário — retorna array com as datas dos últimos 7 dias em formato YYYY-MM-DD
+       * Utilitário — retorna array com as datas dos últimos X dias em formato YYYY-MM-DD
        */
-      private getLast7Days(): string[] {
+      private getLastXDays(daysCount: number): string[] {
             const days: string[] = [];
-            for (let i = 6; i >= 0; i--) {
+            // e.g. se daysCount = 7, iterar de 6 até 0 (7 dias incluindo hoje)
+            for (let i = daysCount - 1; i >= 0; i--) {
                   const d = new Date();
                   d.setDate(d.getDate() - i);
                   days.push(d.toISOString().split('T')[0]);

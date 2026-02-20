@@ -49,6 +49,7 @@ model User {
   updatedAt     DateTime  @updatedAt
 
   @@index([role])
+  @@index([createdAt])
   @@map("users")
 }
 
@@ -159,6 +160,7 @@ model StudentActivity {
   updatedAt   DateTime         @updatedAt
 
   @@index([studentId, status])  // Busca: "tarefas pendentes do aluno X"
+  @@index([status])              // Busca: "todas as tarefas com status X (Analytics)"
   @@index([activityId])          // Busca: "quem está fazendo a atividade Y"
   @@index([studentId])           // Busca: "todas as atividades do aluno X"
   @@map("student_activities")
@@ -182,6 +184,7 @@ model Submission {
 
   @@index([studentActivityId])  // Busca: "submissões desta tarefa"
   @@index([studentId])           // Busca: "submissões do aluno X"
+  @@index([createdAt])           // Busca: "submissões por data (Analytics)"
   @@map("submissions")
 }
 
