@@ -1,5 +1,5 @@
 # 1. Stage: Builder
-FROM node:18-alpine AS builder
+FROM node:20-alpine AS builder
 
 # Create app directory
 WORKDIR /app
@@ -24,7 +24,7 @@ RUN npm run build
 RUN npm prune --production
 
 # 2. Stage: Production
-FROM node:18-alpine
+FROM node:20-alpine
 
 # Set environment variables
 ENV NODE_ENV=production
@@ -38,12 +38,11 @@ WORKDIR /app
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/package.json ./package.json
-# Copy prisma directory (required for migrations usually, or if schema is needed at runtime)
-# Not strictly required for running the generated client, but good practice if we run migrations in entrypoint.
+# Copy prisma directory (required for migrations at runtime)
 COPY --from=builder /app/prisma ./prisma
 
-# Expose port (default NestJS port)
+# Expose port
 EXPOSE 3000
 
-# Start command
-CMD ["node", "dist/main"]
+# Run migrations then start the server
+CMD ["sh", "-c", "npx prisma migrate deploy && node dist/main"]
