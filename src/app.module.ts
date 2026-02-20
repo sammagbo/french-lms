@@ -10,6 +10,7 @@ import { AcademyModule } from './academy/academy.module';
 import { ClassroomModule } from './classroom/classroom.module';
 import { CommunityModule } from './community/community.module';
 import { DevModule } from './dev/dev.module';
+import { AnalyticsModule } from './analytics/analytics.module';
 
 @Module({
       imports: [
@@ -46,7 +47,8 @@ import { DevModule } from './dev/dev.module';
             AcademyModule,
             ClassroomModule,
             CommunityModule,
-            DevModule
+            DevModule,
+            AnalyticsModule,
       ],
       providers: [
             {
