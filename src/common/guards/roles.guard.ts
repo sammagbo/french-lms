@@ -25,6 +25,11 @@ export class RolesGuard implements CanActivate {
                   return false; // ou throw new UnauthorizedException();
             }
 
+            // ADMIN sempre tem acesso total
+            if (user.role === Role.ADMIN) {
+                  return true;
+            }
+
             const hasRole = requiredRoles.some((role) => user.role === role);
             if (!hasRole) {
                   throw new ForbiddenException('Forbidden resource');

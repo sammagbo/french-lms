@@ -1,8 +1,5 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
-  provider = "prisma-client-js"
+  provider      = "prisma-client-js"
   binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
 }
 
@@ -11,7 +8,181 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// 1. Enums
+model User {
+  id                String            @id @default(uuid())
+  email             String            @unique
+  passwordHash      String            @map("password_hash")
+  role              Role              @default(STUDENT)
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+  createdActivities Activity[]
+  comments          Comment[]
+  createdCourses    Course[]
+  feedbacksGiven    Feedback[]
+  posts             Post[]
+  profile           Profile?
+  studentActivities StudentActivity[]
+  submissions       Submission[]
+
+  @@index([role])
+  @@index([createdAt])
+  @@map("users")
+}
+
+model Profile {
+  id          String   @id @default(uuid())
+  bio         String?
+  avatarUrl   String?
+  frenchLevel String?
+  userId      String   @unique
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("profiles")
+}
+
+model Course {
+  id          String   @id @default(uuid())
+  title       String
+  description String?
+  price       Float?   @default(0)
+  slug        String   @unique
+  authorId    String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  author      User     @relation(fields: [authorId], references: [id])
+  modules     Module[]
+
+  @@index([authorId])
+  @@map("courses")
+}
+
+model Module {
+  id        String   @id @default(uuid())
+  title     String
+  courseId  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  lessons   Lesson[]
+  course    Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@map("modules")
+}
+
+model Lesson {
+  id         String     @id @default(uuid())
+  title      String
+  videoUrl   String?
+  content    String?
+  moduleId   String
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+  activities Activity[]
+  module     Module     @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+
+  @@map("lessons")
+}
+
+model Activity {
+  id                String            @id @default(uuid())
+  title             String
+  description       String?
+  lessonId          String?
+  authorId          String
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+  author            User              @relation(fields: [authorId], references: [id])
+  lesson            Lesson?           @relation(fields: [lessonId], references: [id])
+  studentActivities StudentActivity[]
+
+  @@index([authorId])
+  @@index([lessonId])
+  @@map("activities")
+}
+
+model StudentActivity {
+  id          String           @id @default(uuid())
+  status      SubmissionStatus @default(PENDING)
+  dueDate     DateTime?
+  studentId   String
+  activityId  String
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  activity    Activity         @relation(fields: [activityId], references: [id])
+  student     User             @relation(fields: [studentId], references: [id])
+  submissions Submission[]
+
+  @@index([studentId, status])
+  @@index([status])
+  @@index([activityId])
+  @@index([studentId])
+  @@map("student_activities")
+}
+
+model Submission {
+  id                String          @id @default(uuid())
+  textContent       String?
+  attachmentUrl     String?
+  studentActivityId String
+  studentId         String
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+  feedback          Feedback?
+  studentActivity   StudentActivity @relation(fields: [studentActivityId], references: [id])
+  student           User            @relation(fields: [studentId], references: [id])
+
+  @@index([studentActivityId])
+  @@index([studentId])
+  @@index([createdAt])
+  @@map("submissions")
+}
+
+model Feedback {
+  id               String     @id @default(uuid())
+  grade            Float?
+  comment          String?
+  audioFeedbackUrl String?
+  submissionId     String     @unique
+  authorId         String
+  createdAt        DateTime   @default(now())
+  updatedAt        DateTime   @updatedAt
+  author           User       @relation(fields: [authorId], references: [id])
+  submission       Submission @relation(fields: [submissionId], references: [id])
+
+  @@map("feedbacks")
+}
+
+model Post {
+  id        String    @id @default(uuid())
+  title     String
+  content   String
+  published Boolean   @default(false)
+  authorId  String
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  comments  Comment[]
+  author    User      @relation(fields: [authorId], references: [id])
+
+  @@index([authorId])
+  @@map("posts")
+}
+
+model Comment {
+  id        String   @id @default(uuid())
+  content   String
+  postId    String
+  authorId  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  author    User     @relation(fields: [authorId], references: [id])
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@index([postId])
+  @@index([authorId])
+  @@map("comments")
+}
+
 enum Role {
   ADMIN
   TEACHER
@@ -23,222 +194,4 @@ enum SubmissionStatus {
   SUBMITTED
   GRADED
   RETURNED
-}
-
-// 2. Usuários e Profile
-model User {
-  id            String    @id @default(uuid())
-  email         String    @unique
-  passwordHash  String    @map("password_hash")
-  role          Role      @default(STUDENT)
-  
-  profile       Profile?
-  
-  // Relacionamentos de Conteúdo e Tarefas (Professor/Admin)
-  createdCourses    Course[]
-  createdActivities Activity[]
-  feedbacksGiven    Feedback[]
-  posts             Post[]
-  comments          Comment[]
-
-  // Relacionamentos de Aluno
-  studentActivities StudentActivity[]
-  submissions       Submission[]
-
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-
-  @@index([role])
-  @@index([createdAt])
-  @@map("users")
-}
-
-model Profile {
-  id          String    @id @default(uuid())
-  bio         String?
-  avatarUrl   String?
-  frenchLevel String?
-  
-  userId      String    @unique
-  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-
-  @@map("profiles")
-}
-
-// 3. Conteúdo: Course -> Module -> Lesson
-model Course {
-  id          String    @id @default(uuid())
-  title       String
-  description String?
-  price       Float?    @default(0)
-  slug        String    @unique
-  
-  authorId    String
-  author      User      @relation(fields: [authorId], references: [id])
-  
-  modules     Module[]
-
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-
-  @@index([authorId])
-  @@map("courses")
-}
-
-model Module {
-  id          String    @id @default(uuid())
-  title       String
-  
-  courseId    String
-  course      Course    @relation(fields: [courseId], references: [id], onDelete: Cascade)
-  
-  lessons     Lesson[]
-
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-
-  @@map("modules")
-}
-
-model Lesson {
-  id          String    @id @default(uuid())
-  title       String
-  videoUrl    String?   // URL for video content
-  content     String?   // Markdown or HTML content
-  
-  moduleId    String
-  module      Module    @relation(fields: [moduleId], references: [id], onDelete: Cascade)
-  
-  activities  Activity[]
-
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-
-  @@map("lessons")
-}
-
-// 4. Sistema de Tarefas
-model Activity {
-  id          String    @id @default(uuid())
-  title       String
-  description String?
-  
-  // Link opcional a uma lição (pode ser atividade solta ou vinculada)
-  lessonId    String?
-  lesson      Lesson?   @relation(fields: [lessonId], references: [id])
-  
-  authorId    String
-  author      User      @relation(fields: [authorId], references: [id])
-  
-  studentActivities StudentActivity[]
-
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-
-  @@index([authorId])
-  @@index([lessonId])
-  @@map("activities")
-}
-
-model StudentActivity {
-  id          String           @id @default(uuid())
-  status      SubmissionStatus @default(PENDING)
-  dueDate     DateTime?
-  
-  studentId   String
-  student     User             @relation(fields: [studentId], references: [id])
-  
-  activityId  String
-  activity    Activity         @relation(fields: [activityId], references: [id])
-  
-  submissions Submission[]
-
-  createdAt   DateTime         @default(now())
-  updatedAt   DateTime         @updatedAt
-
-  @@index([studentId, status])  // Busca: "tarefas pendentes do aluno X"
-  @@index([status])              // Busca: "todas as tarefas com status X (Analytics)"
-  @@index([activityId])          // Busca: "quem está fazendo a atividade Y"
-  @@index([studentId])           // Busca: "todas as atividades do aluno X"
-  @@map("student_activities")
-}
-
-model Submission {
-  id                String    @id @default(uuid())
-  textContent       String?
-  attachmentUrl     String?
-  
-  studentActivityId String
-  studentActivity   StudentActivity @relation(fields: [studentActivityId], references: [id])
-  
-  studentId         String
-  student           User      @relation(fields: [studentId], references: [id])
-  
-  feedback          Feedback?
-
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
-
-  @@index([studentActivityId])  // Busca: "submissões desta tarefa"
-  @@index([studentId])           // Busca: "submissões do aluno X"
-  @@index([createdAt])           // Busca: "submissões por data (Analytics)"
-  @@map("submissions")
-}
-
-model Feedback {
-  id                String    @id @default(uuid())
-  grade             Float?
-  comment           String?
-  audioFeedbackUrl  String?
-  
-  submissionId      String    @unique
-  submission        Submission @relation(fields: [submissionId], references: [id])
-  
-  authorId          String
-  author            User      @relation(fields: [authorId], references: [id])
-
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
-
-  @@map("feedbacks")
-}
-
-// 5. Blog/Comunidade
-model Post {
-  id        String    @id @default(uuid())
-  title     String
-  content   String
-  published Boolean   @default(false)
-  
-  authorId  String
-  author    User      @relation(fields: [authorId], references: [id])
-  
-  comments  Comment[]
-
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-
-  @@index([authorId])
-  @@map("posts")
-}
-
-model Comment {
-  id        String    @id @default(uuid())
-  content   String
-  
-  postId    String
-  post      Post      @relation(fields: [postId], references: [id], onDelete: Cascade)
-  
-  authorId  String
-  author    User      @relation(fields: [authorId], references: [id])
-
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-
-  @@index([postId])
-  @@index([authorId])
-  @@map("comments")
 }
